@@ -1,0 +1,13 @@
+{
+	"folders":
+	[
+		{
+			"follow_symlinks": true,
+			"path": "/home/steve/Projects/python/src/sagacity.ca/waf-tools"
+		},
+		{
+			"follow_symlinks": true,
+			"path": "/home/steve/Projects/python/src/code.google.com/p/waf"
+		}
+	]
+}

@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+# encoding: utf-8
+# Copyright (c) 2012 SjB <steve@sagacity.ca>. All Rights Reserved.
+
+#from waflib import Context
+#APPNAME = getattr(Context.g_module, 'APPNAME')
+
+bld(features = 'cs',
+	source = ['testlib.cs'],
+	install_path = None,
+	gen = 'TestLib.dll',
+	name = 'test-lib')
