@@ -19,7 +19,7 @@ def options(ctx):
 					help='localtion of personal library')
 
 def configure(ctx):
-	ctx.load('cs_extra test etoform', tooldir='waftools')
+	ctx.load('cs_extra etoform', tooldir='waftools')
 
 	if Options.options.debug:
 		ctx.set_define('DEBUG')
@@ -28,6 +28,7 @@ def configure(ctx):
 	if not assembly_dir:
 		assembly_dir = os.environ.get('ASSEMBLY_DIR', './libs')
 
+	ctx.check_etoform(path_list = [x % assembly_dir for x in ['%s', '%s/Eto']])
 	ctx.check_assembly("AudiologyWidgets", path_list = [x % assembly_dir for x in ['%s', '%s/AudiologyWidgets']])
 
 	ctx.env.APPNAME = APPNAME
