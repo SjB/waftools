@@ -180,7 +180,6 @@ def check_extlib(self, *k, **kw):
         setattr(env, '%s_NAME' % uselib, os.path.basename(ret))
         setattr(env, '%s_LIBPATH' % uselib, os.path.dirname(ret))
 
-        print ('Check %s : %s %s' % (uselib, os.path.basename(ret), ret))
         self.define(self.have_define(kw.get('uselib_store', kw['package'])), 1, 0)
 
     self.msg(kw['msg'], ret, "GREEN")
@@ -200,8 +199,6 @@ def read_assembly(self, assembly, install_path = None):
     name = getattr(env, '%s_NAME' % uselib, None)
     path = getattr(env, '%s_LIBPATH' % uselib, None)
 
-    print ('Read %s: %s %s' % (uselib, name, path))
-
     tg = self(name=name,
               features='fake_lib',
               lib_paths=[path],
@@ -212,7 +209,6 @@ def read_assembly(self, assembly, install_path = None):
         if not d:
             self.fatal('Can\'t find assembly path')
         f = d.find_node(name)
-        print ('Install %r' % f)
         self.install_files(install_path, f)
 
     return tg
