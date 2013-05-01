@@ -7,14 +7,15 @@
 # APPNAME = getattr(Context.g_module, 'APPNAME')
 
 # Reference external Assembly
-# bld.read_assembly('Eto')
+bld.read_assembly('AudiologyWidgets', install_path='${PREFIX}/lib/${APPNAME}')
+bld.read_assembly('Eto', install_path='${PREFIX}/lib/${APPNAME}')
+bld.read_assembly('Eto.Platform', install_path='${PREFIX}/lib/${APPNAME}')
 
 # building a cs application
-bld(features = 'cs',
-	source = ['test-app.cs'],
-#	copy_dependent_files = False,
-#	resources = ['./resources/app_icon.png,app_icon.png'],
-	bintype = 'exe', # use 'winexe' for ui application
-	install_path = '${PREFIX}/lib/${APPNAME}',
-	gen = '%s.exe' % bld.env.APPNAME,
-	use = 'test-lib')
+tg = bld(features = 'cs cs_dev',
+		source = ['test-app.cs'],
+	#	resources = ['./resources/app_icon.png,app_icon.png'],
+		bintype = 'exe', # use 'winexe' for ui application
+		install_path = '${PREFIX}/lib/${APPNAME}',
+		gen = '%s.exe' % bld.env.APPNAME,
+		use = 'test-lib Eto Eto.Platform')

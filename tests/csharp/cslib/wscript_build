@@ -7,6 +7,6 @@
 
 bld(features = 'cs',
 	source = ['testlib.cs'],
-	install_path = None,
+	install_path = '${PREFIX}/lib/${APPNAME}',
 	gen = 'TestLib.dll',
 	name = 'test-lib')

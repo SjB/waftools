@@ -4,22 +4,21 @@
 
 import os, shutil
 
-from waflib.TaskGen import feature, extension, after, before
+from waflib.TaskGen import feature, extension, after, before, taskgen_method
 from waflib.Task import Task
 from waflib.Configure import conf
 from waflib.Tools import ccroot
-from waflib import Utils, Options, Context
+from waflib import Utils, Options, Context, Errors
 
 #
 # waf tools to extend the build-in cs tool provided with the default waf build system.
 #
 
-
 def options(ctx):
     ctx.load('cs')
-    ctx.add_option('--sdk', type='string', dest='sdk_version')
-    ctx.add_option('--with-resgen-binary', type='string', dest='resgenbinary')
-
+    ctx.add_option('--sdk', type='string', dest='sdk_version', help='Specifies SDK version of referenced assemlies')
+    ctx.add_option('--with-resgen-binary', type='string', dest='resgenbinary', help='localtion of the resgen binary')
+    ctx.add_option('--package-dep', dest='package_dep_lib', action='store_true', default=False, help='Package all dependent library with project')
 
 def configure(ctx):
     csc = getattr(Options.options, 'cscbinary', None)
@@ -34,16 +33,21 @@ def configure(ctx):
 
     resgen = getattr(Options.options, 'resgenbinary', None)
     if resgen:
-        conf.env.RESGEN = resgen
+        ctx.env.RESGEN = resgen
     else:
         ctx.find_program(['resgen'], var='RESGEN')
 
+    ctx.env.package_dep_lib = getattr(Options.options, 'package_dep_lib', False)
+
     ctx.load('cs')
+    ccroot.lib_patterns['csshlib'] = ['%s.dll']
 
     # new variable that allow the sdk version to be specified at the command line.
     sdk_version = getattr(Options.options, 'sdk_version', None)
     if sdk_version:
         self.env.append_value('CSFLAGS', '/sdk:%s' % sdk_version)
+
+
 
 
 # converts the *.cs.in source files into *.cs files replacing all @var@ with
@@ -57,13 +61,16 @@ def process_in(self, node):
     tgt = node.change_ext('.cs', ext_in='.cs.in').path_from(self.bld.bldnode)
     tsk = self.create_task('subst', node, tgt)
 
+
 class resources(Task):
     inst_to = None
     run_str = '${RESGEN} ${SRC} ${TGT}'
 
+
 @extension('.resx')
 def process_resx(self, node):
     tsk = self.create_task('resources', node, node.change_ext('.resources', ext_in='.resx'))
+
 
 # Make sure we assign a value to name. (this should be included in the original tool)
 @feature('cs')
@@ -72,59 +79,21 @@ def fix_assign_gen_to_name(self):
     name = getattr(self, 'name', None) or self.gen
     setattr(self, 'name', name)
 
-# Simple Coype file Task
-class copy_file(Task):
-    chmod = Utils.O644
-    inst_to = None
-
-    def run(self):
-        infile = self.inputs[0].abspath()
-        outfile = self.outputs[0].abspath()
-        try:
-            shutil.copy2(infile, outfile)
-        except (OSError, IOError):
-            return 1
-        else:
-            if self.chmod: os.chmod(outfile, self.chmod)
-            return 0
-
-
-# Copy all external (USE) library in the the build directory. This will allow use to
-# run the codes from within that build directory.
-@feature('cs')
-@after('use_cs')
-def copy_dep_nodes_to_builddir(self):
-    if getattr(self, 'copy_dependent_files', True):
-        tsk = getattr(self, 'cs_task', None)
-        if not tsk:
-            self.bld.fatal('not a cs task : %r' % self)
-
-        bld_path = tsk.outputs[0].parent
-
-        for src in tsk.dep_nodes:
-            out = bld_path.find_or_declare(src.name)
-            cp_tsk = self.create_task('copy_file', src, out)
-
-            cp_tsk.set_run_after(tsk)
-            #tsk.outputs.append(out)
-            try:
-                self.install_task.source.append(out)
-            except AttributeError:
-                pass
-
 
 @feature('cs')
 @after('apply_cs')
 @before('use_cs')
 def pkg_cs(self):
     names = self.to_list(getattr(self, 'use', []))
+    use = names[:]
+
     for x in names:
         pkg = 'PKG_%s' % Utils.quote_define_name(x)
         if  pkg in getattr(self.env, 'packages', []):
             self.env.append_value('CSFLAGS', '/pkg:%s' % x)
-            names.remove(x)
+            use.remove(x)
 
-    self.use = ' '.join(names)
+    self.use = ' '.join(use)
 
 
 @feature('cs')
@@ -132,7 +101,8 @@ def pkg_cs(self):
 @before('use_cs')
 def use_extlib(self):
     names = self.to_list(getattr(self, 'use', []))
-    use = self.to_list(getattr(self, 'use', []))
+    use = names[:]
+
     for x in names:
         lib_name = Utils.quote_define_name(x)
 
@@ -200,12 +170,6 @@ def check_extlib(self, *k, **kw):
     if not 'lib_type' in kw:
         kw['lib_type'] = 'shlib'
 
-    if 'csshlib' == kw['lib_type']:
-        if not 'csshlib' in ccroot.lib_patterns:
-            ccroot.lib_patterns['csshlib'] = []
-
-        ccroot.lib_patterns['csshlib'].append('%s.dll')
-
     names = [x % kw['package'] for x in ccroot.lib_patterns[kw['lib_type']]]
     ret = self.find_file(names, path_list=paths)
 
@@ -216,13 +180,14 @@ def check_extlib(self, *k, **kw):
         setattr(env, '%s_NAME' % uselib, os.path.basename(ret))
         setattr(env, '%s_LIBPATH' % uselib, os.path.dirname(ret))
 
+        print ('Check %s : %s %s' % (uselib, os.path.basename(ret), ret))
         self.define(self.have_define(kw.get('uselib_store', kw['package'])), 1, 0)
 
     self.msg(kw['msg'], ret, "GREEN")
 
 
 @conf
-def read_assembly(self, assembly):
+def read_assembly(self, assembly, install_path = None):
     """
     Read a foreign .net assembly that was validated via check_assembl
     """
@@ -235,10 +200,59 @@ def read_assembly(self, assembly):
     name = getattr(env, '%s_NAME' % uselib, None)
     path = getattr(env, '%s_LIBPATH' % uselib, None)
 
-    return self(name=name, features='fake_lib', lib_paths=[path], lib_type='csshlib')
+    print ('Read %s: %s %s' % (uselib, name, path))
+
+    tg = self(name=name,
+              features='fake_lib',
+              lib_paths=[path],
+              lib_type='csshlib')
+
+    if install_path:
+        d = self.root.find_node(path)
+        if not d:
+            self.fatal('Can\'t find assembly path')
+        f = d.find_node(name)
+        print ('Install %r' % f)
+        self.install_files(install_path, f)
+
+    return tg
+
 
 #check if an external assembly is available to the compiler
 @conf
 def check_assembly(self, *k, **kw):
     kw['lib_type'] = 'csshlib'
     check_extlib(self, *k, **kw)
+
+
+# Simple Copy file Task
+class copy_file(Task):
+    chmod = Utils.O644
+    inst_to = None
+
+    def run(self):
+        infile = self.inputs[0].abspath()
+        outfile = self.outputs[0].abspath()
+        try:
+            shutil.copy2(infile, outfile)
+        except (OSError, IOError):
+            return 1
+        else:
+            if self.chmod: os.chmod(outfile, self.chmod)
+            return 0
+
+
+# Copy all external (USE) library in the the build directory. This will allow use to
+# run the codes from within that build directory.
+@feature('cs_dev')
+@after('use_cs')
+def copy_dependent_library(self):
+    names = self.to_list(getattr(self, 'use', []))
+
+    for x in names:
+        tgen = self.bld.get_tgen_by_name(x)
+        for tsk in tgen.tasks:
+            name = tsk.outputs[0]
+            out = self.path.find_or_declare(tsk.outputs[0].name)
+            self.bld.to_log("Copying %s -> %s" % (name.abspath(), out.abspath()))
+            self.copy_dependent_lib_task = self.create_task('copy_file', name, out)

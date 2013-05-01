@@ -3,7 +3,7 @@
 	[
 		{
 			"follow_symlinks": true,
-			"path": "/home/steve/Projects/python/src/sagacity.ca/waf-tools"
+			"path": "."
 		},
 		{
 			"follow_symlinks": true,

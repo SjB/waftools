@@ -5,6 +5,7 @@
 #
 # Waf script to comfigure and use EtoForm
 
+import os, sys
 from waflib import Options, Utils
 
 def options(ctx):
@@ -13,7 +14,10 @@ def options(ctx):
                     help='Specify the path where the EtoForms library are located')
 
 def configure(ctx):
-	etoform_dir = getattr(Options.options, 'etoform_dir', './libs')
+
+	etoform_dir = Options.options.etoform_dir
+	if not etoform_dir:
+		etoform_dir = os.environ.get('ETO_DIR', './libs')
 
 	ctx.check_assembly('Eto', path_list = [etoform_dir])
 
