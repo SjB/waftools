@@ -12,14 +12,14 @@ top = '.'
 out = 'build'
 
 def options(ctx):
-	ctx.load('cs_ext etoform', tooldir='waftools')
+	ctx.load('cs_extra etoform', tooldir='waftools')
 
 	ctx.add_option('--debug', '-d', dest='debug', action='store_true', default=False, help='Enable debug')
 	ctx.add_option('--with-assemblydir', type='string', dest='assembly_dir',
 					help='localtion of personal library')
 
 def configure(ctx):
-	ctx.load('cs_ext test etoform', tooldir='waftools')
+	ctx.load('cs_extra test etoform', tooldir='waftools')
 
 	if Options.options.debug:
 		ctx.set_define('DEBUG')

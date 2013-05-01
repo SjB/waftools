@@ -250,5 +250,4 @@ def copy_dependent_library(self):
         for tsk in tgen.tasks:
             name = tsk.outputs[0]
             out = self.path.find_or_declare(tsk.outputs[0].name)
-            self.bld.to_log("Copying %s -> %s" % (name.abspath(), out.abspath()))
             self.copy_dependent_lib_task = self.create_task('copy_file', name, out)
