@@ -37,3 +37,9 @@ def check_etoform(self, *k, **kw):
 		self.check_assembly('Eto.Platform.Windows', path_list = etoform_dir, uselib_store=uselib_etoplatform)
 	else:
 		self.fatal('Platform not supported')
+
+@conf
+def read_etoform(self, install_path = None):
+	self.read_assembly('Eto', install_path)
+	self.read_assembly('Eto.Platform', install_path)
+
