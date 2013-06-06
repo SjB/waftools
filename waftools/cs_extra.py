@@ -248,6 +248,16 @@ def copy_dependent_library(self):
     for x in names:
         tgen = self.bld.get_tgen_by_name(x)
         for tsk in tgen.tasks:
-            name = tsk.outputs[0]
-            out = self.path.find_or_declare(tsk.outputs[0].name)
-            self.copy_dependent_lib_task = self.create_task('copy_file', name, out)
+            lib = tsk.outputs[0]
+            copy_lib(self, lib)
+            copy_config(self, lib)
+
+def copy_lib(tgen, target):
+    out = tgen.path.find_or_declare(target.name)
+    tgen.copy_dependent_lib_task = tgen.create_task('copy_file', target, out)
+
+def copy_config(tgen, target):
+    config = target.change_ext('.dll.config');
+    if os.path.isfile(config.abspath()):
+        out = tgen.path.find_or_declare(config.name)
+        tgen.copy_dependent_lib_config_task = tgen.create_task('copy_file', config, out)
