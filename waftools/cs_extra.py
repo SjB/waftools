@@ -144,6 +144,12 @@ def set_sdk_version(self, *k, **kw):
 # check if a pkg-config package in install on the system
 @conf
 def check_pkg(self, *k, **kw):
+
+    if k:
+        lst = k[0].split()
+        kw['package'] = lst[0]
+        kw['args'] = ' '.join(lst[1:])
+
     self.check_cfg(**kw)
     if self.get_define(self.have_define(kw['package'])):
         self.env.append_value('packages', 'PKG_%s' % Utils.quote_define_name(kw['package']))
