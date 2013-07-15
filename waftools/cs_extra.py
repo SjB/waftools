@@ -159,7 +159,9 @@ def check_pkg(self, *k, **kw):
 @conf
 def check_extlib(self, *k, **kw):
 
-    env = self.env
+    if not 'env' in kw:
+        kw['env'] = self.env.derive()
+    env = kw['env']
 
     if not 'package' in kw:
         kw['package'] = k[0]
