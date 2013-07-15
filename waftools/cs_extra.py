@@ -192,6 +192,21 @@ def check_extlib(self, *k, **kw):
 
     self.msg(kw['msg'], ret, "GREEN")
 
+@conf
+def install_native_lib(self, dest, files, package=None, env=None, chmod=Utils.O644, relative_trick=False, cwd=None, add=True, postpone=True):
+
+    env = env or self.env
+    libs = []
+
+    if package:
+        uselib = Utils.quote_define_name(package)
+        libpath = getattr(env, '%s_LIBPATH' % uselib, None)
+        for n in files:
+            p = os.path.join(libpath, n)
+            node = self.root.find_node(p)
+            libs.append(node)
+
+    self.install_files(dest, libs, env, chmod, relative_trick, cwd, add, postpone)
 
 @conf
 def read_assembly(self, assembly, install_path = None):
@@ -269,3 +284,4 @@ def copy_config(tgen, target):
     if os.path.isfile(config.abspath()):
         out = tgen.path.find_or_declare(config.name)
         tgen.copy_dependent_lib_config_task = tgen.create_task('copy_file', config, out)
+
