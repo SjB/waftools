@@ -90,7 +90,8 @@ def pkg_cs(self):
     for x in names:
         pkg = 'PKG_%s' % Utils.quote_define_name(x)
         if  pkg in getattr(self.env, 'packages', []):
-            self.env.append_value('CSFLAGS', '/pkg:%s' % x)
+            pkg_name = getattr(self.env, pkg, x)
+            self.env.append_value('CSFLAGS', '/pkg:%s' % pkg_name)
             use.remove(x)
 
     self.use = ' '.join(use)
@@ -150,9 +151,13 @@ def check_pkg(self, *k, **kw):
         kw['package'] = lst[0]
         kw['args'] = ' '.join(lst[1:])
 
-    self.check_cfg(**kw)
-    if self.get_define(self.have_define(kw['package'])):
-        self.env.append_value('packages', 'PKG_%s' % Utils.quote_define_name(kw['package']))
+    ret = self.check_cfg(**kw)
+    uselib = (('uselib_store' in kw) and kw['uselib_store']) or kw['package']
+    if (None != ret) and self.get_define(self.have_define(uselib)):
+        pkg = 'PKG_%s' % Utils.quote_define_name(uselib)
+        self.env.append_value('packages', pkg)
+        setattr(self.env, pkg, kw['package'])
+    return ret
 
 
 # check if an external lib is available to the compiler.
@@ -215,6 +220,11 @@ def read_assembly(self, assembly, install_path = None):
     """
     env = self.env
     uselib = Utils.quote_define_name(assembly)
+
+    # if assembly is a package skip it.
+    pkg = 'PKG_%s' % uselib
+    if pkg in getattr(self.env, 'packages', []):
+        return
 
     if not uselib in getattr(env, 'ext_csshlib', []):
         self.fatal('Assembly %s not registered as a C sharp assembly' % assembly)
