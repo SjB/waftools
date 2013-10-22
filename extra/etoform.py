@@ -10,14 +10,14 @@ from waflib import Options, Utils
 from waflib.Configure import conf
 
 def options(ctx):
-	ctx.load('cs_extra', tooldir='waftools')
 	ctx.add_option('--with-EtoForms', type='string', dest='etoform_dir',
                     help='Specify the path where the EtoForms library are located')
 
+def configure(ctx):
+	ctx.load('cs_extra', tooldir='extra')
 
 @conf
 def check_etoform(self, *k, **kw):
-
 	etoform_dir = Options.options.etoform_dir
 	if not etoform_dir:
 		etoform_dir = os.environ.get('ETO_DIR', './libs')

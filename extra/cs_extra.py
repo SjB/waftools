@@ -79,7 +79,8 @@ def pkg_cs(self):
     for x in names:
         pkg = 'PKG_%s' % Utils.quote_define_name(x)
         if  pkg in getattr(self.env, 'packages', []):
-            self.env.append_value('CSFLAGS', '/pkg:%s' % x)
+            pkg_name = getattr(self.env, pkg, x)
+            self.env.append_value('CSFLAGS', '/pkg:%s' % pkg_name)
             use.remove(x)
 
     self.use = ' '.join(use)
@@ -133,16 +134,28 @@ def set_sdk_version(self, *k, **kw):
 # check if a pkg-config package in install on the system
 @conf
 def check_pkg(self, *k, **kw):
-    self.check_cfg(**kw)
-    if self.get_define(self.have_define(kw['package'])):
-        self.env.append_value('packages', 'PKG_%s' % Utils.quote_define_name(kw['package']))
+
+    if k:
+        lst = k[0].split()
+        kw['package'] = lst[0]
+        kw['args'] = ' '.join(lst[1:])
+
+    ret = self.check_cfg(**kw)
+    uselib = (('uselib_store' in kw) and kw['uselib_store']) or kw['package']
+    if (None != ret) and self.get_define(self.have_define(uselib)):
+        pkg = 'PKG_%s' % Utils.quote_define_name(uselib)
+        self.env.append_value('packages', pkg)
+        setattr(self.env, pkg, kw['package'])
+    return ret
 
 
 # check if an external lib is available to the compiler.
 @conf
 def check_extlib(self, *k, **kw):
 
-    env = self.env
+    if not 'env' in kw:
+        kw['env'] = self.env
+    env = kw['env']
 
     if not 'package' in kw:
         kw['package'] = k[0]
@@ -173,6 +186,21 @@ def check_extlib(self, *k, **kw):
 
     self.msg(kw['msg'], ret, "GREEN")
 
+@conf
+def install_native_lib(self, dest, files, package=None, env=None, chmod=Utils.O644, relative_trick=False, cwd=None, add=True, postpone=True):
+
+    env = env or self.env
+    libs = []
+
+    if package:
+        uselib = Utils.quote_define_name(package)
+        libpath = getattr(env, '%s_LIBPATH' % uselib, None)
+        for n in files:
+            p = os.path.join(libpath, n)
+            node = self.root.find_node(p)
+            libs.append(node)
+
+    self.install_files(dest, libs, env, chmod, relative_trick, cwd, add, postpone)
 
 @conf
 def read_assembly(self, assembly, install_path = None):
@@ -181,6 +209,11 @@ def read_assembly(self, assembly, install_path = None):
     """
     env = self.env
     uselib = Utils.quote_define_name(assembly)
+
+    # if assembly is a package skip it.
+    pkg = 'PKG_%s' % uselib
+    if pkg in getattr(self.env, 'packages', []):
+        return
 
     if not uselib in getattr(env, 'ext_csshlib', []):
         self.fatal('Assembly %s not registered as a C sharp assembly' % assembly)
@@ -237,6 +270,17 @@ def copy_dependent_library(self):
     for x in names:
         tgen = self.bld.get_tgen_by_name(x)
         for tsk in tgen.tasks:
-            name = tsk.outputs[0]
-            out = self.path.find_or_declare(tsk.outputs[0].name)
-            self.copy_dependent_lib_task = self.create_task('copy_file', name, out)
+            lib = tsk.outputs[0]
+            copy_lib(self, lib)
+            copy_config(self, lib)
+
+def copy_lib(tgen, target):
+    out = tgen.path.find_or_declare(target.name)
+    tgen.copy_dependent_lib_task = tgen.create_task('copy_file', target, out)
+
+def copy_config(tgen, target):
+    config = target.change_ext('.dll.config');
+    if os.path.isfile(config.abspath()):
+        out = tgen.path.find_or_declare(config.name)
+        tgen.copy_dependent_lib_config_task = tgen.create_task('copy_file', config, out)
+
