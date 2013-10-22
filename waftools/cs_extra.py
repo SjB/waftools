@@ -61,17 +61,6 @@ def process_in(self, node):
     tgt = node.change_ext('.cs', ext_in='.cs.in').path_from(self.bld.bldnode)
     tsk = self.create_task('subst', node, tgt)
 
-
-class resources(Task):
-    inst_to = None
-    run_str = '${RESGEN} ${SRC} ${TGT}'
-
-
-@extension('.resx')
-def process_resx(self, node):
-    tsk = self.create_task('resources', node, node.change_ext('.resources', ext_in='.resx'))
-
-
 # Make sure we assign a value to name. (this should be included in the original tool)
 @feature('cs')
 @before('apply_cs')
