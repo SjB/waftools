@@ -14,7 +14,7 @@ def options(ctx):
                     help='Specify the path where the EtoForms library are located')
 
 def configure(ctx):
-	ctx.load('cs_extra', tooldir='extra')
+	ctx.load('cs', tooldir='extra')
 
 @conf
 def check_etoform(self, *k, **kw):

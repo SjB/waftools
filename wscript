@@ -28,8 +28,11 @@ def configure(ctx):
 	if not assembly_dir:
 		assembly_dir = os.environ.get('ASSEMBLY_DIR', './libs')
 
-	ctx.check_etoform(path_list = [x % assembly_dir for x in ['%s', '%s/Eto']])
+	ctx.check_pkg("gtk-sharp-2.0")
+	ctx.check_pkg("glib-sharp-2.0", uselib_store = "GLIB")
+
 	ctx.check_assembly("AudiologyWidgets", path_list = [x % assembly_dir for x in ['%s', '%s/AudiologyWidgets']])
+	ctx.check_etoform(path_list = [x % assembly_dir for x in ['%s', '%s/Eto']])
 
 	ctx.check_nunit()
 

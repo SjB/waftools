@@ -17,5 +17,5 @@ tg = bld(features = 'cs cs_dev',
 	#	resources = ['./resources/app_icon.png,app_icon.png'],
 		bintype = 'exe', # use 'winexe' for ui application
 		install_path = '${PREFIX}/lib/${APPNAME}',
-		gen = '%s.exe' % bld.env.APPNAME,
-		use = 'test-lib Eto Eto.Platform')
+		target = '%s.exe' % bld.env.APPNAME,
+		use = 'test-lib Eto Eto.Platform gtk-sharp-2.0')
