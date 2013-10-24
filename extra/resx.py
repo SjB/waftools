@@ -1,12 +1,17 @@
 #! /usr/bin/env python
-# 
+# encoding: utf-8
+# Steve Beaulac, 2013 (SjB)
 
 import os
 from waflib import Task
 from waflib.TaskGen import extension
 
+def options(opt):
+	opt.add_option('--with-resgen-binary', type='string', dest='resgenbinary', help='localtion of the resgen binary')
+
 def configure(conf):
-	conf.find_program(['resgen'], var='RESGEN')
+	resgen = getattr(Options.options, 'resgenbinary', 'resgen')
+	conf.find_program([resgen], var='RESGEN')
 	conf.env.RESGENFLAGS = '/useSourcePath'
 
 @extension('.resx')
