@@ -10,4 +10,4 @@ bld(features = 'cs',
 	install_path = '${PREFIX}/lib/${APPNAME}',
 	target = 'TestLib.dll',
 	name = 'test-lib',
-    use = 'GLIB')
+    use = 'System System.Xml GLIB')

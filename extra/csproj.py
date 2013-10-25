@@ -16,7 +16,7 @@ import os, uuid, sys
 import xml.etree.ElementTree as XML
 from hashlib import md5
 
-from waflib import Utils, Task, Build, Options, Logs, Errors, Scripting, TaskGen
+from waflib import Utils, Task, Build, Options, Logs, Errors, Scripting, TaskGen, Context
 
 DEFAULT_CSPROJ_TEMPLATE = '''<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
@@ -105,11 +105,61 @@ class MSBuildContext(Build.BuildContext):
                     continue
 
                 tg.post()
-                print("{0}".format(tg.use))
                 if not getattr(tg, 'cs_task', None):
                     continue
 
+                tgt = tg.cs_task.outputs[0]
+                project_name = strip_ext(tg.name)
+                guid = make_uuid(project_name)
+                csproj_filename = tg.path.make_node(tg.name).change_ext('.csproj').get_src().abspath()
+                output_path = os.path.join(self.out_dir, tgt.bld_dir())
+                assembly_name = tgt.change_ext('').name
 
+                print("------ {0} ------".format(csproj_filename))
+                print("Guid {0}".format(guid))
+                print("OutputPath {0}".format(output_path))
+                for s in tg.cs_task.inputs:
+                    print("Compile {0}".format(s.path_from(tg.path)))
+                print("AssemblyName {0}".format(assembly_name))
+
+                (dotnet_refs, packages, ext_refs, projects) = self.group_dependent_assembly(tg)
+
+
+    def group_dependent_assembly(self, tg):
+
+        get = self.get_tgen_by_name
+        packages = []
+        projects = []
+        dotnet_refs = []
+        ext_refs = []
+
+        for x in Utils.to_list(getattr(tg, 'use', [])):
+            pkg = getattr(self.env, 'PKG_' + x.upper(), None)
+            if pkg and self.env.CS_NAME == "mono":
+                print("Package: {0}".format(pkg))
+                packages.append(x)
+                continue
+
+            csflags = getattr(self.env, 'CSFLAGS_' + x.upper(), None)
+            if csflags:
+                print("HintPath Reference: {0}".format(csflags[0][3:]))
+                ext_refs.append(csflags[3:])
+                continue
+
+            try:
+                y = get(x)
+            except Errors.WafError:
+                print(".Net Reference: {0}".format(x))
+                dotnet_refs.append(x)
+                continue
+
+            y.post()
+            tsk = getattr(y, 'cs_task', None) or getattr(y, 'link_task', None)
+            if tsk:
+                print("Project {0} {1}".format(strip_ext(y.name), make_uuid(strip_ext(y.name))))
+                projects.append(tsk)
+
+        return (dotnet_refs, packages, ext_refs, projects)
 
     def generate_solution(self):
         pass
