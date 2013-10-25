@@ -136,14 +136,16 @@ class MSBuildContext(Build.BuildContext):
         for x in Utils.to_list(getattr(tg, 'use', [])):
             pkg = getattr(self.env, 'PKG_' + x.upper(), None)
             if pkg and self.env.CS_NAME == "mono":
-                print("Package: {0}".format(pkg))
-                packages.append(x)
+                ver = getattr(self.env, 'VERSION_' + x.upper(), None)
+                print("Package: {0} version {1}".format(pkg, ver))
+                packages.append({'name': x, 'version': ver})
                 continue
 
             csflags = getattr(self.env, 'CSFLAGS_' + x.upper(), None)
             if csflags:
-                print("HintPath Reference: {0}".format(csflags[0][3:]))
-                ext_refs.append(csflags[3:])
+                assembly = csflags[0][3:]
+                print("Reference: {0} HintPath {1}".format(os.path.basename(assembly), assembly))
+                ext_refs.append({'name': os.path.basename(assembly), 'hintpath': assembly})
                 continue
 
             try:
