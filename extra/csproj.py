@@ -67,6 +67,18 @@ def make_uuid(k):
     guid = uuid.UUID(d, version=4)
     return '{%s}' % str(guid).upper()
 
+@TaskGen.taskgen_method
+def csproj_filename(self):
+    project_name = strip_ext(self.name)
+    return os.path.join(self.path.abspath(), '%s.csproj' % project_name)
+
+@TaskGen.taskgen_method
+def project_guid(self):
+    return make_uuid(self.name)
+
+@TaskGen.taskgen_method
+def csproj_properties(self):
+    pass
 
 class MSBuildContext(Build.BuildContext):
     xml_namespace = 'http://schemas.microsoft.com/developer/msbuild/2003'
@@ -108,22 +120,29 @@ class MSBuildContext(Build.BuildContext):
                 if not getattr(tg, 'cs_task', None):
                     continue
 
-                tgt = tg.cs_task.outputs[0]
-                project_name = strip_ext(tg.name)
-                guid = make_uuid(project_name)
-                csproj_filename = tg.path.make_node(tg.name).change_ext('.csproj').get_src().abspath()
-                output_path = os.path.join(self.out_dir, tgt.bld_dir())
-                assembly_name = tgt.change_ext('').name
+                self.taskgen_to_csproj(tg)
 
-                print("------ {0} ------".format(csproj_filename))
-                print("Guid {0}".format(guid))
-                print("OutputPath {0}".format(output_path))
-                for s in tg.cs_task.inputs:
-                    print("Compile {0}".format(s.path_from(tg.path)))
-                print("AssemblyName {0}".format(assembly_name))
 
-                (dotnet_refs, packages, ext_refs, projects) = self.group_dependent_assembly(tg)
 
+    def taskgen_to_csproj(self, tg):
+        tgt = tg.cs_task.outputs[0]
+        src_dir = tg.path
+        bld_dir = tg.path.get_bld()
+
+        project_name = strip_ext(tg.name)
+
+        assembly_name = tgt.change_ext('').name
+
+        print("------ {0} ------".format(tg.csproj_filename()))
+        print("Source path {0}".format(src_dir.abspath()))
+        print("build path {0}".format(bld_dir.abspath()))
+        print("Guid {0}".format(tg.project_guid()))
+        print("OutputPath {0}".format(bld_dir.abspath()))
+        for s in tg.cs_task.inputs:
+            print("Compile {0}".format(s.path_from(tg.path)))
+        print("AssemblyName {0}".format(assembly_name))
+
+        (dotnet_refs, packages, ext_refs, projects) = self.group_dependent_assembly(tg)
 
     def group_dependent_assembly(self, tg):
 
@@ -136,30 +155,24 @@ class MSBuildContext(Build.BuildContext):
         for x in Utils.to_list(getattr(tg, 'use', [])):
             pkg = getattr(self.env, 'PKG_' + x.upper(), None)
             if pkg and self.env.CS_NAME == "mono":
-                ver = getattr(self.env, 'VERSION_' + x.upper(), None)
-                print("Package: {0} version {1}".format(pkg, ver))
-                packages.append({'name': x, 'version': ver})
+                packages.append(x)
                 continue
 
             csflags = getattr(self.env, 'CSFLAGS_' + x.upper(), None)
             if csflags:
-                assembly = csflags[0][3:]
-                print("Reference: {0} HintPath {1}".format(os.path.basename(assembly), assembly))
-                ext_refs.append({'name': os.path.basename(assembly), 'hintpath': assembly})
+                ext_refs.append(csflags[0][3:])
                 continue
 
             try:
                 y = get(x)
             except Errors.WafError:
-                print(".Net Reference: {0}".format(x))
                 dotnet_refs.append(x)
                 continue
 
             y.post()
             tsk = getattr(y, 'cs_task', None) or getattr(y, 'link_task', None)
             if tsk:
-                print("Project {0} {1}".format(strip_ext(y.name), make_uuid(strip_ext(y.name))))
-                projects.append(tsk)
+                projects.append(y)
 
         return (dotnet_refs, packages, ext_refs, projects)
 
