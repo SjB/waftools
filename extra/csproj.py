@@ -97,19 +97,14 @@ class MSBuildContext(Build.BuildContext):
         self.recurse([self.run_dir])
 
         # new to create the solution file here
-        self.create_csproj_files()
+        XML.register_namespace(self.xml_namespace);
 
-        self.generate_solution()
+        self.create_csproj_files()
 
     def create_csproj_files(self):
         """
         Create a csproj file for each task_gen with a cs_task.
         """
-
-        template_file = getattr(self.env, 'CSProjTemplate', None)
-
-        template = template_file and Utils.readf(template_file) or DEFAULT_CSPROJ_TEMPLATE
-        xml_template = XML.fromstring(template);
 
         for g in self.groups:
             for tg in g:
@@ -120,62 +115,141 @@ class MSBuildContext(Build.BuildContext):
                 if not getattr(tg, 'cs_task', None):
                     continue
 
-                self.taskgen_to_csproj(tg)
+                csproj = CSProjectBuilder(self, tg)
+                csproj.add_properties(getattr(tg, 'PropertyGroup', {}))
+                csproj.write()
 
 
+class CSProjectBuilder(object):
 
-    def taskgen_to_csproj(self, tg):
-        tgt = tg.cs_task.outputs[0]
-        src_dir = tg.path
-        bld_dir = tg.path.get_bld()
+    packages = []
+    projects = []
+    dotnet_refs = []
+    external_refs = []
 
-        project_name = strip_ext(tg.name)
+    properties = {}
 
-        assembly_name = tgt.change_ext('').name
+    def __init__(self, bld, tg):
+        self.bld = bld
+        self.env = bld.env
+        self.tg = tg
 
-        print("------ {0} ------".format(tg.csproj_filename()))
-        print("Source path {0}".format(src_dir.abspath()))
-        print("build path {0}".format(bld_dir.abspath()))
-        print("Guid {0}".format(tg.project_guid()))
-        print("OutputPath {0}".format(bld_dir.abspath()))
-        for s in tg.cs_task.inputs:
-            print("Compile {0}".format(s.path_from(tg.path)))
-        print("AssemblyName {0}".format(assembly_name))
+        self.src_dir = tg.path
+        self.bld_dir = tg.path.get_bld()
 
-        (dotnet_refs, packages, ext_refs, projects) = self.group_dependent_assembly(tg)
+        XML.register_namespace('', 'http://schemas.microsoft.com/developer/msbuild/2003')
+        self.csproj = XML.fromstring(self.get_project_xmlstr())
+        self.add_properties(getattr(self.bld.env, 'PropertyGroup', {}))
 
-    def group_dependent_assembly(self, tg):
+    def get_project_xmlstr(self):
+        tpl = getattr(self.bld, 'CSProjTemplate', None)
+        return (tpl and Utils.readf(tpl)) or DEFAULT_CSPROJ_TEMPLATE
 
+    def add_properties(self, prop):
+        self.properties.update(prop)
+
+
+    def project_name():
+        return self.tg.csproj_filename()
+
+
+    def write(self):
+        self.group_dependent_assembly()
+        self.get_property_from_tg()
+
+        project = self.csproj.getroot()
+        self.write_property_group(project)
+        self.write_source(project)
+        self.write_dotnet_refs(project)
+        self.write_ext_refs(project)
+        self.write_packages(project)
+        self.write_project(project)
+
+        self.csproj.write(self.project_name(), xml_declaration=True, encoding='utf-8')
+
+
+    def group_dependent_assembly(self):
+        '''
+        cycle over all dependencies and sort them into types
+        '''
         get = self.get_tgen_by_name
-        packages = []
-        projects = []
-        dotnet_refs = []
-        ext_refs = []
-
         for x in Utils.to_list(getattr(tg, 'use', [])):
             pkg = getattr(self.env, 'PKG_' + x.upper(), None)
             if pkg and self.env.CS_NAME == "mono":
-                packages.append(x)
+                self.packages.append(x)
                 continue
 
             csflags = getattr(self.env, 'CSFLAGS_' + x.upper(), None)
             if csflags:
-                ext_refs.append(csflags[0][3:])
+                self.external_refs.append(csflags[0][3:])
                 continue
 
             try:
                 y = get(x)
             except Errors.WafError:
-                dotnet_refs.append(x)
+                self.dotnet_refs.append(x)
                 continue
 
             y.post()
             tsk = getattr(y, 'cs_task', None) or getattr(y, 'link_task', None)
             if tsk:
-                projects.append(y)
+                self.projects.append(y)
 
-        return (dotnet_refs, packages, ext_refs, projects)
 
-    def generate_solution(self):
+    def get_property_from_tg(self):
+        pg = self.properties
+        tg = self.tg
+
+        pg['OutputPath'] = tg.path.get_bld().abspath()
+        pg['AssemeblyName'] = tg.change_ext('').name
+        pg['ProjectGuid'] = tg.project_guid()
+        pg['OutputType'] = getattr(tg, 'bintype', 'library')
+        pg['Platform'] = getattr(tg, 'platform', 'anycpu')
+        pg['Configuration'] = getattr(tg, 'csdebug', self.env.CSDEBUG) or 'Release'
+
+
+    def write_source(self, project):
+        item_group = XML.Element('ItemGroup', {'Label': 'Source'})
+        tg = self.tg
+
+        for s in tg.cs_task.inputs:
+            e = XML.Element('Compile', {'Include': s.path_from(tg.path)})
+            item_group.append(e)
+
+        project.insert(len(project) - 1, item_group)
+
+
+    def write_property_group(self, project):
+        property_group = self.findfirst(project, "./ns:PropertyGroup");
+        if not property_group:
+            property_group = XML.Element('PropertyGroup')
+            project.insert(1, property_group)
+
+        for k, v in self.properties:
+            p = self.get_property_element(property_group, k)
+            p.text = v
+
+
+    def get_property_element(self, element, prop):
+        p = self.findfirst(element, './ns:%s' % prop)
+        if not p:
+            p = XML.SubElement(element, prop)
+
+        return p
+
+
+    def findfirst(self, element, path):
+        return element.find(path, namespaces={'ns': self.xml_namespace})
+
+
+    def write_dotnet_refs(self, project):
         pass
-        #xml_template.write(self.outputs[0].parent.abspath(), xml_declaration=True, encoding='utf-8')
+
+    def write_ext_refs(self, project):
+        pass
+
+    def write_packages(self, project):
+        pass
+
+    def write_project(self, project):
+        pass
