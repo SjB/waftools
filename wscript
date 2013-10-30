@@ -35,7 +35,7 @@ def configure(ctx):
 	ctx.check_etoform(path_list = [x % assembly_dir for x in ['%s', '%s/Eto']])
 
 	ctx.check_nunit()
-
+	ctx.env.append_value('PropertyGroup', {'TargetFrameworkVersion': 'v4.5'})
 	ctx.env.APPNAME = APPNAME
 
 def build(bld):

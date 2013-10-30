@@ -213,7 +213,7 @@ def configure(conf):
 	conf.env.package_dep_lib = getattr(Options.options, 'package_dep_lib', False)
 
 	# new variable that allow the sdk version to be specified at the command line.
-	sdk_version = getattr(Options.options, 'sdk_version', None)
+	self.sdk_version = getattr(Options.options, 'sdk_version', None)
 	if sdk_version:
 		self.env.append_value('CSFLAGS', '/sdk:%s' % sdk_version)
 
