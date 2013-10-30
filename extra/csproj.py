@@ -75,7 +75,7 @@ def csproj_name(self):
 
 @TaskGen.taskgen_method
 def csproj_path(self):
-    return os.path.join(self.path.abspath(), '%s.csproj' % self.csproj_name())
+    return self.path.find_or_declare('%s.csproj' % self.csproj_name())
 
 
 @TaskGen.taskgen_method
@@ -123,17 +123,17 @@ class MSBuildContext(Build.BuildContext):
 class CSProjectBuilder(object):
 
     xml_namespace = 'http://schemas.microsoft.com/developer/msbuild/2003'
-    packages = []
-    projects = []
-    dotnet_refs = []
-    external_refs = []
-
-    properties = {}
 
     def __init__(self, bld, tg):
         self.bld = bld
         self.env = bld.env.derive()
         self.tg = tg
+
+        self.properties = {}
+        self.packages = []
+        self.projects = []
+        self.dotnet_refs = []
+        self.external_refs = []
 
         self.src_dir = tg.path
         self.bld_dir = tg.path.get_bld()
@@ -141,10 +141,13 @@ class CSProjectBuilder(object):
         # new to create the solution file here
         XML.register_namespace('', self.xml_namespace);
 
-        prop = getattr(self.env, 'PropertyGroup', {})
-        print('{0} {1}'.format(self.get_name(), prop))
-        self.add_properties(prop)
-        print('{0} {1}'.format(self.get_name(), self.properties))
+        for prop in getattr(self.env, 'PropertyGroup', []):
+            try:
+                k, v = prop.split('=', 2)
+                self.add_properties({k: v})
+            except ValueError:
+                pass
+
 
     def get_project_xmlstr(self):
         tpl = getattr(self.bld, 'CSProjTemplate', None)
@@ -165,13 +168,21 @@ class CSProjectBuilder(object):
         self.get_property_from_tg(self.tg)
 
         project = XML.fromstring(self.get_project_xmlstr())
+
+        self.set_tools_version(project)
         self.write_property_group(project)
         self.write_source(project)
         self.write_reference(project)
 
         indent(project)
         csproj = XML.ElementTree(project)
-        csproj.write(self.get_path(), xml_declaration=True, encoding='utf-8')
+        csproj.write(self.get_path().abspath(), xml_declaration=True, encoding='utf-8')
+
+
+    def set_tools_version(self, project):
+        tools_version = getattr(self.env, 'ToolsVersion', None)
+        if tools_version:
+            project.set('ToolsVersion', str(tools_version))
 
 
     def group_dependent_assembly(self):
@@ -181,14 +192,12 @@ class CSProjectBuilder(object):
         get = self.bld.get_tgen_by_name
         env = self.env
         for x in Utils.to_list(getattr(self.tg, 'use', [])):
-            pkg = getattr(env, 'PKG_' + x.upper(), None)
-            if pkg and env.CS_NAME == "mono":
-                self.packages.append(pkg)
-                continue
 
             csflags = getattr(env, 'CSFLAGS_' + x.upper(), None)
             if csflags:
-                self.external_refs.append(csflags[0][3:])
+                for ref in Utils.to_list(csflags):
+                    self.external_refs.append(ref[3:])
+
                 continue
 
             try:
@@ -254,7 +263,6 @@ class CSProjectBuilder(object):
 
         self.write_dotnet_refs(item_group)
         self.write_ext_refs(item_group)
-        self.write_packages(item_group)
         self.write_project(item_group)
 
         project.insert(len(project) - 1, item_group)
@@ -268,24 +276,17 @@ class CSProjectBuilder(object):
 
     def write_ext_refs(self, item_group):
         for ref in self.external_refs:
+            lib_path = self.bld.root.find_or_declare(ref);
             ref_el = XML.SubElement(item_group, 'Reference')
-            ref_el.set('Include', os.path.basename(ref));
+            ref_el.set('Include', lib_path.name);
             hintpath_el = XML.SubElement(ref_el, 'HintPath')
-            hintpath_el.text = ref;
-
-
-    def write_packages(self, item_group):
-        for ref in self.packages:
-            ref_el = XML.SubElement(item_group, 'Reference')
-            ref_el.set('Include', ref)
-            pkg_el = XML.SubElement(ref_el, 'Package')
-            pkg_el.text = ref
+            hintpath_el.text = lib_path.path_from(self.src_dir);
 
 
     def write_project(self, item_group):
         for ref in self.projects:
             pref_el = XML.SubElement(item_group, 'ProjectReference')
-            pref_el.set('Include', ref.csproj_path())
+            pref_el.set('Include', ref.csproj_path().path_from(self.src_dir))
             project_el = XML.SubElement(pref_el, 'Project')
             project_el.text = '{%s}' % ref.project_guid()
             name_el = XML.SubElement(pref_el, 'Name')

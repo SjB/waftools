@@ -213,7 +213,7 @@ def configure(conf):
 	conf.env.package_dep_lib = getattr(Options.options, 'package_dep_lib', False)
 
 	# new variable that allow the sdk version to be specified at the command line.
-	self.sdk_version = getattr(Options.options, 'sdk_version', None)
+	sdk_version = getattr(Options.options, 'sdk_version', None)
 	if sdk_version:
 		self.env.append_value('CSFLAGS', '/sdk:%s' % sdk_version)
 
@@ -306,8 +306,9 @@ def check_pkg(self, *k, **kw):
 	env = kw.get('env', self.env)
 	uselib = kw.get('uselib_store', kw['package']).upper()
 
-	modversion = self.check_cfg(modversion = kw['package'])
-	setattr(env, 'VERSION_' + uselib, modversion)
+	if 'args' in kw:
+		kw['args'] = Utils.to_list(kw['args'])
+		kw['args'].append('--libs')
 
 	ret = self.check_cfg(**kw)
 
