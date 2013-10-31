@@ -12,14 +12,14 @@ top = '.'
 out = 'build'
 
 def options(ctx):
-	ctx.load('cs etoform', tooldir='extra')
+	ctx.load('cs etoform csproj', tooldir='extra')
 
 	ctx.add_option('--debug', '-d', dest='debug', action='store_true', default=False, help='Enable debug')
 	ctx.add_option('--with-assemblydir', type='string', dest='assembly_dir',
 					help='localtion of personal library')
 
 def configure(ctx):
-	ctx.load('cs etoform nunit', tooldir='extra')
+	ctx.load('cs etoform nunit csproj', tooldir='extra')
 
 	if Options.options.debug:
 		ctx.set_define('DEBUG')
@@ -35,7 +35,8 @@ def configure(ctx):
 	ctx.check_etoform(path_list = [x % assembly_dir for x in ['%s', '%s/Eto']])
 
 	ctx.check_nunit()
-
+	ctx.env.append_value('PropertyGroup', 'TargetFrameworkVersion=v4.0')
+	ctx.env.ToolsVersion = 4.0
 	ctx.env.APPNAME = APPNAME
 
 def build(bld):

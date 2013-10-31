@@ -303,11 +303,18 @@ def check_pkg(self, *k, **kw):
 		kw['package'] = lst[0]
 		kw['args'] = ' '.join(lst[1:])
 
+	env = kw.get('env', self.env)
+	uselib = kw.get('uselib_store', kw['package']).upper()
+
+	if 'args' in kw:
+		kw['args'] = Utils.to_list(kw['args'])
+		kw['args'].append('--libs')
+
 	ret = self.check_cfg(**kw)
 
 	if self.get_define(self.have_define(kw.get('uselib_store', kw['package']))):
-		uselib = kw.get('uselib_store', kw['package']).upper()
-		env = kw.get('env', self.env)
+
+
 		if env.CS_NAME == 'mono':
 			setattr(env, 'PKG_' + uselib, kw['package'])
 
