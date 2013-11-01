@@ -220,7 +220,7 @@ class CSProjectBuilder(object):
         pg['OutputPath'] = tg.path.get_bld().path_from(tg.path)
         pg['AssemblyName'] = tg.csproj_name()
         pg['ProjectGuid'] = tg.project_guid()
-        pg['OutputType'] = getattr(tg, 'bintype', 'library')
+        pg['OutputType'] = getattr(tg, 'bintype', tg.target.endswith('.dll') and 'library' or 'exe')
         pg['Platform'] = getattr(tg, 'platform', 'anycpu')
         pg['Configuration'] = getattr(tg, 'csdebug', self.env.CSDEBUG) or 'Release'
 
