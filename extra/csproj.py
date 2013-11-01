@@ -75,7 +75,7 @@ def csproj_name(self):
 
 @TaskGen.taskgen_method
 def csproj_path(self):
-    return self.path.find_or_declare('%s.csproj' % self.csproj_name())
+    return self.path.find_or_declare('%s.csproj' % self.csproj_name()).get_src()
 
 
 @TaskGen.taskgen_method
