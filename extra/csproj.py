@@ -217,7 +217,7 @@ class CSProjectBuilder(object):
     def get_property_from_tg(self, tg):
         pg = self.properties
 
-        pg['OutputPath'] = tg.path.get_bld().abspath()
+        pg['OutputPath'] = tg.path.get_bld().path_from(tg.path)
         pg['AssemblyName'] = tg.csproj_name()
         pg['ProjectGuid'] = tg.project_guid()
         pg['OutputType'] = getattr(tg, 'bintype', 'library')
