@@ -222,7 +222,7 @@ class CSProjectBuilder(object):
         pg['ProjectGuid'] = tg.project_guid()
         pg['OutputType'] = getattr(tg, 'bintype', tg.target.endswith('.dll') and 'library' or 'exe')
         pg['Platform'] = getattr(tg, 'platform', 'anycpu')
-        pg['Configuration'] = getattr(tg, 'csdebug', self.env.CSDEBUG) or 'Release'
+        pg['Configuration'] = 'Debug' if getattr(tg, 'csdebug', self.env.CSDEBUG) else 'Release'
 
 
     def write_source(self, project):
