@@ -46,7 +46,6 @@ def apply_cs(self):
 		else:
 			no_nodes.append(x)
 	self.source = no_nodes
-
 	bintype = getattr(self, 'bintype', self.target.endswith('.dll') and 'library' or 'exe')
 	self.cs_task = tsk = self.create_task('mcs', cs_nodes, self.path.find_or_declare(self.target))
 	tsk.env.CSTYPE = '/target:%s' % bintype
@@ -220,7 +219,7 @@ def configure(conf):
 	debug = getattr(Options.options, 'debug', None)
 	if debug:
 		conf.env.append_value('CSFLAGS', '/define:DEBUG')
-		self.env.CSDEBUG = debug;
+		conf.env.CSDEBUG = debug;
 
 
 def options(opt):
