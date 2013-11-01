@@ -20,7 +20,7 @@ def options(ctx):
         help='Specif the path where the MonoGame cli libraries are located')
 
 def configure(ctx):
-    ctx.load('cs_extra', tooldir='extra')
+    ctx.load('cs', tooldir='extra')
 
 @conf
 def check_monogame(self, *k, **kw):
