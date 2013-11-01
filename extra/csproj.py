@@ -192,11 +192,13 @@ class CSProjectBuilder(object):
         get = self.bld.get_tgen_by_name
         env = self.env
         for x in Utils.to_list(getattr(self.tg, 'use', [])):
-
-            csflags = getattr(env, 'CSFLAGS_' + x.upper(), None)
+            uselib = x.upper()
+            csflags = getattr(env, 'CSFLAGS_' + uselib, None)
             if csflags:
+                pkg = getattr(env, 'PKG_' + uselib, None)
+
                 for ref in Utils.to_list(csflags):
-                    self.external_refs.append(ref[3:])
+                    self.external_refs.append({"reference": ref[3:], "package": pkg})
 
                 continue
 
@@ -276,11 +278,14 @@ class CSProjectBuilder(object):
 
     def write_ext_refs(self, item_group):
         for ref in self.external_refs:
-            lib_path = self.bld.root.find_or_declare(ref);
+
+            lib_path = self.bld.root.find_or_declare(ref['reference']);
             ref_el = XML.SubElement(item_group, 'Reference')
             ref_el.set('Include', lib_path.name);
             hintpath_el = XML.SubElement(ref_el, 'HintPath')
             hintpath_el.text = lib_path.path_from(self.src_dir);
+            private_el = XML.SubElement(ref_el, 'Private')
+            private_el.text = 'true' if not ref['package'] else 'false'
 
 
     def write_project(self, item_group):
