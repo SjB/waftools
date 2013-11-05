@@ -251,7 +251,7 @@ class CSProjectBuilder(object):
 
     def get_property_element(self, element, prop):
         p = self.findfirst(element, './ns:%s' % prop)
-        if not p:
+        if p is None:
             p = XML.SubElement(element, prop)
 
         return p
