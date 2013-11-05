@@ -172,6 +172,7 @@ class CSProjectBuilder(object):
         self.set_tools_version(project)
         self.write_property_group(project)
         self.write_source(project)
+        self.write_embeddedresources(project)
         self.write_reference(project)
 
         indent(project)
@@ -286,6 +287,31 @@ class CSProjectBuilder(object):
             hintpath_el.text = lib_path.path_from(self.src_dir);
             private_el = XML.SubElement(ref_el, 'Private')
             private_el.text = 'true' if not ref['package'] else 'false'
+
+    def write_embeddedresources(self, project):
+        '''
+        <ItemGroup>
+            <EmbeddedResource Include="..\data\clear.png">
+                <Link>clear.png</Link>
+            </EmbeddedResource>
+        </ItemGroup>
+        '''
+
+        resources = getattr(self.tg, 'resources', []);
+        if len(resources):
+            item_group = XML.Element('ItemGroup', {'Label': 'EmbeddedResource'})
+            for res in resources:
+                (path, link) = res.split(',', 2)
+                nod = self.bld.root.find_resource(path)
+                if nod:
+                    res_el = XML.Element('EmbeddedResource', {'Include': nod.path_from(self.src_dir)})
+                    if len(link):
+                        link_el = XML.SubElement(res_el, 'Link')
+                        link_el.text = link
+
+                    item_group.append(res_el)
+
+            project.insert(len(project) - 1, item_group)
 
 
     def write_project(self, item_group):
