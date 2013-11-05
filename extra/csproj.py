@@ -19,10 +19,11 @@ from hashlib import md5
 from waflib import Utils, Task, Build, Options, Logs, Errors, Scripting, TaskGen, Context
 
 DEFAULT_CSPROJ_TEMPLATE = '''<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
     <PropertyGroup Label="Global">
         <ProductVersion>9.0.30729</ProductVersion>
         <SchemaVersion>2.0</SchemaVersion>
+        <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     </PropertyGroup>
     <PropertyGroup Label="Debug" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DebugSymbols>true</DebugSymbols>
