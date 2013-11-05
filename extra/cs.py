@@ -24,7 +24,7 @@ Note that the configuration may compile C# snippets::
 
 import os, shutil, tempfile
 
-from waflib import Context, Errors, Logs, Options, Task, Utils
+from waflib import Context, Errors, Logs, Options, Task, Utils, Node
 from waflib.Configure import conf
 from waflib.TaskGen import after, before, extension, feature
 from waflib.Tools import ccroot
@@ -293,6 +293,40 @@ def read_assembly(self, name, install_path = None):
 		self.install_files(install_path, f)
 
 		return tg
+
+
+@conf
+def import_resources(self, *k, **kw):
+	resources = []
+	if isinstance(k[0], list):
+		args = k[0]
+	else:
+		args = k;
+
+	for x in args:
+		s = res_to_str(x)
+		if s:
+			resources.append(s)
+
+	for k, v in kw.iteritems():
+		s = res_to_str(v, k);
+		if s:
+			resources.append(s)
+
+	return resources;
+
+
+def res_to_str(res, link = None):
+
+	if not res:
+		return None
+
+	if isinstance(res, Node.Node):
+		(path, link) = (res.abspath(), link or res.name)
+	else:
+		(path, link) = (res, link or os.path.basename(res))
+
+	return '{0},{1}'.format(path, link)
 
 
 @conf
