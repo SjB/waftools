@@ -303,35 +303,23 @@ def read_assembly(self, name, install_path = None):
 
 
 @conf
-def import_resources(self, *k, **kw):
-	resources = []
-	if isinstance(k[0], list):
-		args = k[0]
-	else:
-		args = k;
-
-	for x in args:
-		s = res_to_str(x)
-		if s:
-			resources.append(s)
-
-	for k, v in kw.iteritems():
-		s = res_to_str(v, k);
-		if s:
-			resources.append(s)
-
-	return resources;
+def import_resources(self, resources, namespace = None):
+	return [res_to_str(x, namespace) for x in resources if x is not None]
 
 
-def res_to_str(res, link = None):
 
-	if not res:
+def res_to_str(res, namespace = None):
+
+	if res is None:
 		return None
 
 	if isinstance(res, Node.Node):
-		(path, link) = (res.abspath(), link or res.name)
+		(path, link) = (res.abspath(), res.name)
 	else:
-		(path, link) = (res, link or os.path.basename(res))
+		(path, link) = (res, os.path.basename(res))
+
+	if namespace is not None:
+		link = '%s.%s' % (namespace, link)
 
 	return '{0},{1}'.format(path, link)
 
