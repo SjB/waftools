@@ -10,7 +10,7 @@ from waflib import Options, Utils
 from waflib.Configure import conf
 
 def options(ctx):
-	ctx.add_option('--with-EtoForms', type='string', dest='etoform_dir',
+	ctx.add_option('--with-EtoForms', type='string', dest='etoform_dir', default = None,
                     help='Specify the path where the EtoForms library are located')
 
 def configure(ctx):
@@ -18,15 +18,14 @@ def configure(ctx):
 
 @conf
 def check_etoform(self, *k, **kw):
-	etoform_dir = Options.options.etoform_dir
-	if not etoform_dir:
-		etoform_dir = os.environ.get('ETO_DIR', './libs')
+	etoform_dir = []
+	etoform_dir.append(Options.options.etoform_dir)
+	etoform_dir.append(os.environ.get('ETO_DIR', None))
 
-	etoform_dir = [etoform_dir]
 	if 'path_list' in kw:
 		etoform_dir.extend(Utils.to_list(kw['path_list']))
 
-	self.check_assembly('Eto', path_list = etoform_dir)
+	self.check_assembly('Eto', path_list = [x for x in etoform_dir if x is not None])
 
 	os_platform = Utils.unversioned_sys_platform()
 	uselib_etoplatform = 'Eto.Platform'
