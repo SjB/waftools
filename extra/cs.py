@@ -449,14 +449,24 @@ def copy_dependent_library(self):
 	names = self.to_list(getattr(self, 'use', []))
 
 	for x in names:
+		uselib = x.upper()
+
+		pkg = getattr(self.env, 'PKG_' + uselib, [])
+		if len(pkg):
+			print(repr(pkg))
+			continue
+
 		try:
 			tg = self.bld.get_tgen_by_name(x)
+			tg.post()
+			tsk = getattr(tg, 'cs_task', None) or getattr(tg, 'link_task', None)
+			lib = tsk.outputs[0]
 		except Errors.WafError:
-			continue
-		tg.post()
+			csflags = getattr(self.env, 'CSFLAGS_' + uselib, [])
+			if len(csflags) == 0:
+				continue
+			lib = self.bld.root.find_node(csflags[0][3:])
 
-		tsk = getattr(tg, 'cs_task', None) or getattr(tg, 'link_task', None)
-		lib = tsk.outputs[0]
 		copy_lib(self, lib)
 		copy_config(self, lib)
 
