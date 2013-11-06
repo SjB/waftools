@@ -71,14 +71,15 @@ def use_cs(self):
 	names = self.to_list(getattr(self, 'use', []))
 	get = self.bld.get_tgen_by_name
 	for x in names:
+		uselib = x.upper()
 
-		pkg = getattr(self.env, 'PKG_' + x.upper(), None)
-		if pkg and self.env.CS_NAME == "mono":
-			self.env.append_value('CSFLAGS', '/pkg:%s' % pkg)
+		pkg = getattr(self.env, 'PKG_' + uselib, [])
+		if len(pkg) and self.env.CS_NAME == "mono":
+			self.env.append_value('CSFLAGS', '/pkg:%s' % pkg[0])
 			continue
 
-		csflags = getattr(self.env, 'CSFLAGS_' + x.upper(), None)
-		if csflags:
+		csflags = getattr(self.env, 'CSFLAGS_' + uselib, [])
+		if len(csflags):
 			self.env.append_value('CSFLAGS', csflags);
 			continue
 
@@ -92,6 +93,7 @@ def use_cs(self):
 		tsk = getattr(y, 'cs_task', None) or getattr(y, 'link_task', None)
 		if not tsk:
 			self.bld.fatal('cs task has no link task for use %r' % self)
+
 		self.cs_task.dep_nodes.extend(tsk.outputs) # dependency
 		self.cs_task.set_run_after(tsk) # order (redundant, the order is infered from the nodes inputs/outputs)
 		self.env.append_value('CSFLAGS', '/reference:%s' % tsk.outputs[0].abspath())
