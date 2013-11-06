@@ -264,6 +264,11 @@ def read_csshlib(self, name, paths=[]):
 	:return: A task generator having the feature *fake_lib* which will call :py:func:`waflib.Tools.ccroot.process_lib`
 	:rtype: :py:class:`waflib.TaskGen.task_gen`
 	"""
+	try:
+		return self.get_tgen_by_name(name)
+	except Errors.WafError:
+		pass
+
 	return self(name=name, features='fake_lib', lib_paths=paths, lib_type='csshlib')
 
 @conf
