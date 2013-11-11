@@ -32,14 +32,19 @@ from waflib.Tools import ccroot
 ccroot.USELIB_VARS['cs'] = set(['CSFLAGS', 'ASSEMBLIES', 'RESOURCES'])
 ccroot.lib_patterns['csshlib'] = ['%s']
 
+@extension('.cs')
+def process_cs(self, node):
+	pass
+
 @feature('cs')
-@before('process_source')
+@after('process_source')
 def apply_cs(self):
 	"""
 	Create a C# task bound to the attribute *cs_task*. There can be only one C# task by task generator.
 	"""
 	cs_nodes = []
 	no_nodes = []
+
 	for x in self.to_nodes(self.source):
 		if x.name.endswith('.cs'):
 			cs_nodes.append(x)
@@ -138,13 +143,15 @@ def process_in(self, node):
 	Converts the *.cs.in source files into *.cs files replacing all @var@ with
 	the appropriate values in the related variable in the ctx.Define array
 	"""
-	for x in self.env['DEFINES']:
-		(k, v) = x.split('=')
-		setattr(self.cs_task.generator, k, v)
 
-	tgt = node.change_ext('.cs', ext_in='.cs.in').path_from(self.bld.bldnode)
+	tgt = node.change_ext('.cs', ext_in='.cs.in')
 	tsk = self.create_task('subst', node, tgt)
 
+	for x in self.env['DEFINES']:
+		(k, v) = x.split('=')
+		setattr(tsk.generator, k, v)
+
+	self.source.append(tgt)
 
 class mcs(Task.Task):
 	"""
