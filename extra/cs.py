@@ -275,7 +275,6 @@ def read_csshlib(self, name, paths=[]):
 		return self.get_tgen_by_name(name)
 	except Errors.WafError:
 		pass
-
 	return self(name=name, features='fake_lib', lib_paths=paths, lib_type='csshlib')
 
 @conf
@@ -296,9 +295,7 @@ def read_assembly(self, name, install_path = None):
 	assembly = flag[3:]
 	filename = os.path.basename(assembly)
 	path = os.path.dirname(assembly)
-
 	tg = self.read_csshlib(filename, paths=[path])
-
 	if install_path:
 		d = self.root.find_node(path)
 		if not d:
@@ -388,8 +385,7 @@ def check_assembly(self, *k, **kw):
 		if ret:
 			self.define(self.have_define(kw.get('uselib_store', kw['package'])), 1, 0)
 			uselib = kw.get('uselib_store', kw['package']).upper()
-
-			env.append_value('CSFLAGS_' + uselib, '-r:' + ret)
+			env.append_value('CSFLAGS_' + uselib, '-r:' + os.path.abspath(ret))
 
 			if not 'okmsg' in kw:
 				kw['okmsg'] = 'yes'
@@ -460,7 +456,6 @@ def copy_dependent_library(self):
 
 		pkg = getattr(self.env, 'PKG_' + uselib, [])
 		if len(pkg):
-			print(repr(pkg))
 			continue
 
 		try:
