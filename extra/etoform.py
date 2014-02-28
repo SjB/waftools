@@ -10,35 +10,42 @@ from waflib import Options, Utils
 from waflib.Configure import conf
 
 def options(ctx):
-	ctx.add_option('--with-EtoForms', type='string', dest='etoform_dir', default = None,
-                    help='Specify the path where the EtoForms library are located')
+    ctx.add_option('--with-eto-forms', type='string', dest='eto_forms_dir', default = None,
+            help='Specify the path where the Eto.Forms library are located')
+    ctx.add_option('--with-eto-platform', type='string', dest='eto_platform_dir', default = None,
+            help='Specify the path where the Eto.Platform library are located')
 
-def configure(ctx):
-	ctx.load('cs', tooldir='extra')
+    def configure(ctx):
+        ctx.load('cs', tooldir='extra')
 
 @conf
 def check_etoform(self, *k, **kw):
-	etoform_dir = []
-	etoform_dir.append(Options.options.etoform_dir)
-	etoform_dir.append(os.environ.get('ETO_DIR', None))
+    etoform_dir = [Options.options.eto_forms_dir, Options.options.eto_platform_dir]
+    etoform_dir.append(os.environ.get('ETO_FORMS_DIR', None))
+    etoform_dir.append(os.environ.get('ETO_PLATFORM_DIR', None))
 
-	if 'path_list' in kw:
-		etoform_dir.extend(Utils.to_list(kw['path_list']))
+    if 'path_list' in kw:
+        etoform_dir.extend(Utils.to_list(kw['path_list']))
 
-	self.check_assembly('Eto', path_list = [x for x in etoform_dir if x is not None])
+    if 'platform' in kw:
+        platform = 'Eto.Platform.' + kw['platform'];
+    else:
+        os_platform = Utils.unversioned_sys_platform()
+        if 'linux' == os_platform:
+            platform = 'Eto.Platform.Gtk'
+        elif 'win32' == os_platform:
+            platform = 'Eto.Platform.Windows'
+        else:
+            self.fatal('Platform not supported')
 
-	os_platform = Utils.unversioned_sys_platform()
-	uselib_etoplatform = 'Eto.Platform'
+    uselib_etoplatform = 'Eto.Platform'
 
-	if 'linux' == os_platform:
-		self.check_assembly('Eto.Platform.Gtk', path_list = etoform_dir, uselib_store=uselib_etoplatform)
-	elif 'win32' == os_platform:
-		self.check_assembly('Eto.Platform.Windows', path_list = etoform_dir, uselib_store=uselib_etoplatform)
-	else:
-		self.fatal('Platform not supported')
+    self.check_assembly('Eto', path_list = [x for x in etoform_dir if x is not None])
+    self.check_assembly(platform, path_list = [x for x in etoform_dir if x is not None], uselib_store=uselib_etoplatform)
+
 
 @conf
 def read_etoform(self, install_path = None):
-	self.read_assembly('Eto', install_path)
-	self.read_assembly('Eto.Platform', install_path)
+    self.read_assembly('Eto', install_path)
+    self.read_assembly('Eto.Platform', install_path)
 
