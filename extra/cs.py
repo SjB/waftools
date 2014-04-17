@@ -80,7 +80,7 @@ def use_cs(self):
 
 		pkg = getattr(self.env, 'PKG_' + uselib, [])
 		if len(pkg) and self.env.CS_NAME == "mono":
-			self.env.append_value('CSFLAGS', '/pkg:%s' % pkg[0])
+			self.env.append_value('CSFLAGS', '/pkg:%s' % pkg)
 			continue
 
 		csflags = getattr(self.env, 'CSFLAGS_' + uselib, [])
