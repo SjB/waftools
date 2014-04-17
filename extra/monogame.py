@@ -12,7 +12,6 @@ libpath = './libs'
 
 os_platform = Utils.unversioned_sys_platform()
 if 'linux' == os_platform:
-    libname = 'MonoGame.Framework.Linux'
     libpath = '/usr/lib/monogame'
 
 def options(ctx):
@@ -25,13 +24,15 @@ def configure(ctx):
 @conf
 def check_monogame(self, *k, **kw):
 
-    monogame_dir = Options.options.monogame_dir
+    monogame_dir = Options.options.monogame_dir or os.environ.get('MONOGAME_DIR', None)  
+
     if not monogame_dir:
         if None != self.check_pkg('monogame', uselib_store=library, mandatory = False):
             return
-        monogame_dir = os.environ.get('MONOGAME_DIR', libpath)
+        monogame_dir = []
+    else:
+        monogame_dir = [monogame_dir]
 
-    monogame_dir = [monogame_dir]
     if 'path_list' in kw:
         monogame_dir.extend(Utils.to_list(kw['path_list']))
 
