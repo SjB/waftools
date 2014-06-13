@@ -226,7 +226,6 @@ class CSProjectBuilder(object):
         pg['Platform'] = getattr(tg, 'platform', 'anycpu')
         pg['Configuration'] = 'Debug' if getattr(tg, 'csdebug', self.env.CSDEBUG) else 'Release'
 
-
     def write_source(self, project):
         item_group = XML.Element('ItemGroup', {'Label': 'Source'})
         tg = self.tg
@@ -282,6 +281,7 @@ class CSProjectBuilder(object):
         for ref in self.external_refs:
 
             lib_path = self.bld.root.find_or_declare(ref['reference']);
+
             ref_el = XML.SubElement(item_group, 'Reference')
             ref_el.set('Include', lib_path.name);
             hintpath_el = XML.SubElement(ref_el, 'HintPath')
